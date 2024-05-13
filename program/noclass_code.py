@@ -39,12 +39,13 @@ test_loader = DataLoader(test_dataset, batch_size=6, shuffle=True)
 model = models.alexnet(pretrained=True)
 model.eval()
 
+# display_predictions関数
 def display_predictions(image):
     # チャンネル数を1から3に変換
     image = image.repeat(3, 1, 1)
 
-    # モデルへの入力準備
-    image = image.unsqueeze(0)  # バッチ次元を追加
+    # モデルへの入力準備(バッチ次元を追加)
+    image = image.unsqueeze(0)  
 
     # 確率を計算
     with torch.no_grad():
@@ -60,19 +61,21 @@ def display_predictions(image):
     for widget in right_frame.winfo_children():
         widget.destroy()
 
-    # 円グラフを2つ作成
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))  # 1行2列のサブプロット
+    # 円グラフを2つ作成するためのサブプロットを設定
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))  
 
+    # ラベル名のリストを作成
     labels = [label_names[label] for label in top_labels]
     
-    # 1つ目の円グラフ
+    # 1つ目の円グラフを描画
     ax1.pie(top_probs, labels=labels, autopct='%1.1f%%')
-    ax1.axis('equal')  # 円グラフを正円にするために必要
+    ax1.axis('equal')  
     ax1.set_title('AlexNet predictive labels inferred by fashion-minist')
     
+    # ランダムな確率分布を生成
     randoms = sorted(np.random.dirichlet(np.ones(20), size=1)[0], reverse=True)[:9]
 
-    # 2つ目の円グラフ
+    # 2つ目の円グラフを描画
     labels = [f"No.{i}" for i in range(1,10)]
     ax2.pie(randoms, labels=labels, autopct='%1.1f%%')
     ax2.axis('equal')
@@ -83,40 +86,9 @@ def display_predictions(image):
     canvas.draw()
     canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-# Tkinter GUIを設定
-root = tk.Tk()
-root.title('FashionMNIST Image Viewer')
-
-# メインフレームを作成
-main_frame = Frame(root)
-main_frame.pack(fill=tk.BOTH, expand=True)
-
-# 左側のフレーム (画像表示用)
-left_frame = Frame(main_frame)
-left_frame.pack(side=tk.LEFT, padx=10, pady=10)
-
-# 画像表示用のフレーム
-frame_images = Frame(left_frame, relief="groove", highlightbackground="red", highlightcolor="red")
-frame_images.pack(padx=10, pady=10)
-
-# ボタン用のフレーム
-frame_buttons = Frame(left_frame)
-frame_buttons.pack(padx=10, pady=10)
-
-# 右側のフレーム (大きな領域)
-right_frame = Frame(main_frame, bg="gray", width=600, height=600)
-right_frame.pack(side=tk.RIGHT, padx=10, pady=10)
-
-# 画像表示用のラベルと枠のデフォルトスタイルを生成
-labels = [[Label(frame_images, borderwidth=2) for _ in range(3)] for _ in range(2)]
-for r in range(2):
-    for c in range(3):
-        labels[r][c].grid(row=r, column=c, padx=5, pady=5)
-
-selected_label = None
-
+# on_image_click関数
 def on_image_click(event, r, c):
-    """ 画像がクリックされた時の処理 """
+    # グローバル変数を使用
     global selected_label
     # すべてのラベルの枠をリセット
     for row in labels:
@@ -124,29 +96,42 @@ def on_image_click(event, r, c):
             label.config(relief="groove")
     # 選択されたラベルの枠を強調
     event.widget.config(relief="raised", borderwidth=8)
+    # 選択された画像の座標を保存
     selected_label = (r, c)
+    # 画像選択ボタンを有効化
     button_select.config(state=tk.NORMAL)
 
+# select_image関数
 def select_image():
-    """ 選択された画像に対する操作 """
+    # 画像が選択されている場合
     if selected_label:
+        # 選択された画像の座標を取得
         r, c = selected_label
-        image = test_dataset[c * 2 + r][0]  # 選択された画像を取得
+        # 選択された画像データを取得
+        image = test_dataset[c * 2 + r][0]  
+        # 選択された画像の予測結果を表示
         display_predictions(image)
 
+# load_images関数
 def load_images():
+    # 画像選択ボタンを無効化
     button_select.config(state=tk.DISABLED)
-    """FashionMNISTデータセットから6枚の画像をロードして表示する"""
+    # データローダーから6枚の画像を取得
     images, _ = next(iter(test_loader))
+    # 6枚の画像を表示
     for i in range(6):
+        # 画像データを処理
         image = images[i].squeeze()
         image = (image.numpy() * 255).astype(np.uint8)
         pil_image = Image.fromarray(image, 'L')
         tk_image = ImageTk.PhotoImage(pil_image)
+        # 画像を表示するラベルの座標を計算
         r, c = divmod(i, 3)
         label = labels[r][c]
+        # ラベルに画像を設定
         label.config(image=tk_image)
-        label.image = tk_image  # 画像がガベージコレクションにより消えないように参照を保持
+        label.image = tk_image  # 画像がガベージコレクションされないように参照を保持
+        # クリックイベントを設定
         label.bind("<Button-1>", lambda event, r=r, c=c: on_image_click(event, r, c))
 
 # 画像をリロードするボタン
